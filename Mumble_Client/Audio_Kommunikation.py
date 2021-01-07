@@ -55,15 +55,7 @@ def sound_received_handler(user, soundchunk):
     	stream_out.write(soundchunk.pcm)
 
 
-# Spin up a client and connect to mumble server
-#Modus Server-Verbindung herstellen
-#mumble = pymumble_py3.Mumble(server, nick, password=pwd, port=port)
-#mumble.callbacks.set_callback(PCS, sound_received_handler)
-#mumble.set_receive_sound(1)  # Enable receiving sound from mumble server
-#mumble.start() #Verbindung wird zu Server wird gestartet
-#mumble.is_ready()  #Verbindung hergestellt
-
-server_connect = 0
+server_connect = 0 #Hilfsvariable für Serverstatus
 
 #Anfangsbedingung EIN/AUS (Serververbindung abfragen)
 if not GPIO.input("P8_29"):
@@ -79,56 +71,88 @@ else:
   GPIO.output("P8_34", GPIO.LOW)
   GPIO.output("P8_36", GPIO.HIGH)
   server_connect = 0
-
-while True: 
  
+while True :
  if server_connect == 1:
-
-  while True:
-   if not GPIO.input("P8_29"):
-    GPIO.output("P8_34", GPIO.HIGH)
-    GPIO.output("P8_36", GPIO.LOW)
     if GPIO.input("P8_10"):
-     GPIO.output("P9_23", GPIO.HIGH)
-     GPIO.output("P9_25", GPIO.LOW)
-     GPIO.output("P9_29", GPIO.LOW)
-  
-
+      GPIO.output("P9_23", GPIO.HIGH)
+      GPIO.output("P9_25", GPIO.LOW)
+      GPIO.output("P9_29", GPIO.LOW)
+      while True and not GPIO.input("P8_8") and not GPIO.input("P8_10") and not GPIO.input("P8_7") and not GPIO.input("P8_9")  and server_connect == 1:
+       if GPIO.input("P8_29"):
+        GPIO.output("P9_23", GPIO.LOW)
+        GPIO.output("P9_25", GPIO.LOW)
+        GPIO.output("P9_29", GPIO.LOW)
+        GPIO.output("P8_34", GPIO.LOW)
+        GPIO.output("P8_36", GPIO.HIGH)
+        server_connect = 0
+        mumble.stop()
+       
 #Modus: Push-to-talk
-   elif GPIO.input("P8_7"): 
+    elif GPIO.input("P8_7"): 
      GPIO.output("P9_23", GPIO.LOW)
      GPIO.output("P9_25", GPIO.HIGH)
      GPIO.output("P9_29", GPIO.LOW)
-     while True and not GPIO.input("P8_9") and not GPIO.input("P8_10") and not GPIO.input("P8_8"):
-      if GPIO.input("P8_30"):
-        data = stream_in.read(CHUNK, exception_on_overflow=False)
-        mumble.sound_output.add_sound(data)
-   
+     while True and not GPIO.input("P8_8") and  not GPIO.input("P8_9") and not GPIO.input("P8_10") and not GPIO.input("P8_8") and server_connect == 1:
+      if not GPIO.input("P8_29"):
+        if GPIO.input("P8_30"):
+         data = stream_in.read(CHUNK, exception_on_overflow=False)
+         mumble.sound_output.add_sound(data)
+      else:
+       GPIO.output("P9_23", GPIO.LOW)
+       GPIO.output("P9_25", GPIO.LOW)
+       GPIO.output("P9_29", GPIO.LOW)
+       GPIO.output("P8_34", GPIO.LOW)
+       GPIO.output("P8_36", GPIO.HIGH)
+       server_connect = 0
+       mumble.stop()
+        
 #Modus: Dauerhaft Sprechen
-   elif GPIO.input("P8_9"):
-    GPIO.output("P9_23", GPIO.LOW)
-    GPIO.output("P9_25", GPIO.LOW)
-    GPIO.output("P9_29", GPIO.HIGH)
-    while True and not GPIO.input("P8_7") and not GPIO.input("P8_10") and not GPIO.input("P8_8"): 
-     data = stream_in.read(CHUNK, exception_on_overflow=False)
-     mumble.sound_output.add_sound(data)
-#Modus: Platzhalter können mit Funktionen belegt werden/Gültige Auswahl treffen
-   else:
-    GPIO.output("P9_23", GPIO.HIGH)
-    GPIO.output("P9_25", GPIO.HIGH)
-    GPIO.output("P9_29", GPIO.HIGH)
+    elif GPIO.input("P8_9"):
+     GPIO.output("P9_23", GPIO.LOW)
+     GPIO.output("P9_25", GPIO.LOW)
+     GPIO.output("P9_29", GPIO.HIGH)
+     while True and not GPIO.input("P8_8")  and not GPIO.input("P8_7") and not GPIO.input("P8_10") and not GPIO.input("P8_8") and server_connect == 1: 
+      if not GPIO.input("P8_29"):
+       data = stream_in.read(CHUNK, exception_on_overflow=False)
+       mumble.sound_output.add_sound(data)
+      else:      
+       GPIO.output("P9_23", GPIO.LOW)
+       GPIO.output("P9_25", GPIO.LOW)
+       GPIO.output("P9_29", GPIO.LOW)
+       GPIO.output("P8_34", GPIO.LOW)
+       GPIO.output("P8_36", GPIO.HIGH)
+       server_connect = 0
+       mumble.stop()
 
- else:
-  GPIO.output("P9_23", GPIO.LOW)
-  GPIO.output("P9_25", GPIO.LOW)
-  GPIO.output("P9_29", GPIO.LOW)   
-  GPIO.output("P9_34", GPIO.LOW)
-  GPIO.output("P9_36", GPIO.HIGH)
+#Modus Platzhalter, Bitte eine Auswahl treffen
+    else:
+     GPIO.output("P9_23", GPIO.HIGH)
+     GPIO.output("P9_25", GPIO.HIGH)
+     GPIO.output("P9_29", GPIO.HIGH)
+     while True and not GPIO.input("P8_7") and not GPIO.input("P8_9") and not GPIO. input("P8_10") and server_connect == 1:
+      if GPIO.input("P8_29"):
+       GPIO.output("P9_23", GPIO.LOW)
+       GPIO.output("P9_25", GPIO.LOW)
+       GPIO.output("P9_29", GPIO.LOW)
+       GPIO.output("P8_34", GPIO.LOW)
+       GPIO.output("P8_36", GPIO.HIGH)
+       server_connect = 0
+       mumble.stop()
+
+#Server neu verbinden
+ elif server_connect== 0:
+  while True and server_connect == 0:
+   if not GPIO.input("P8_29"):
+    mumble = pymumble_py3.Mumble(server, nick, password=pwd, port=port)
+    mumble.callbacks.set_callback(PCS, sound_received_handler)
+    mumble.set_receive_sound(1)  # Enable receiving sound from mumble server
+    mumble.start() #Verbindung wird zu Server wird gestartet
+    mumble.is_ready()  #Verbindung hergestellt
+    GPIO.output("P8_34", GPIO.HIGH)
+    GPIO.output("P8_36", GPIO.LOW)
+    server_connect = 1
 
 
 
 
-# close the stream and pyaudio instance
-#stream.stop_stream()
-#stream.close()
-#p.terminate()
