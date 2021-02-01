@@ -21,6 +21,7 @@ print("Mixers:", scanMixers)
 #Namen anpassen in Abhängigkeit von "scanMixers"
 mixer_speaker = audio.Mixer('Speaker', cardindex=1)
 mixer_mic = audio.Mixer('Mic', cardindex=1)
+ 
 
 #ADC-Setup
 ADC.setup()
@@ -30,8 +31,11 @@ analogPin2 = "P9_35"
 
 while True:
  mic_level = round(ADC.read(analogPin1)*100)
- speaker_level = round( ADC.read(analogPin2)*100)
+ speaker_level = round(ADC.read(analogPin2)*100)
+ #Mikrofon-Level in Alsa verändert, aber keine Änderung der Laustärke
+ #-->Keine Ahnung wie dieses Problem behoben werden kann
  mixer_mic.setvolume(mic_level)
+ #Änderung Lautstärke Kopfhörer funktioniert 
  mixer_speaker.setvolume(speaker_level)
  #Reaktionszeit Lautstärkeveränderungen Speaker/Mic --> je kleiner Sleep-time
  #desto schneller werden Laustärkeänderungen umgesetzt
